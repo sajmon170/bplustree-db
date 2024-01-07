@@ -7,11 +7,12 @@ class Triangle : public Record {
 	Point2 a;
 	Point2 b;
 	Point2 c;
+	int key;
 
 public:
 	Triangle() = default;
-	Triangle(Point2 const& a, Point2 const& b, Point2 const& c)
-		: a(a), b(b), c(c) {}
+	Triangle(Point2 const& a, Point2 const& b, Point2 const& c, int k)
+		: a(a), b(b), c(c), key(k) {}
 
 	auto operator<(Record const&) const -> bool;
 	auto operator==(Record const&) const -> bool;
@@ -30,6 +31,10 @@ public:
 
 	inline auto getC() const -> Point2 {
 		return c;
+	}
+
+	inline auto getKey() const -> int {
+		return key;
 	}
 
 	auto area() const -> double;

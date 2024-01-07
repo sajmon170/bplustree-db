@@ -1,5 +1,7 @@
 #pragma once
 
+#include "serializer.hh"
+
 #include <istream>
 #include <ostream>
 
@@ -9,3 +11,15 @@ public:
 	virtual void deserialize(std::istream&) = 0;
 	virtual auto size_on_disk() const -> std::size_t = 0;
 };
+
+template <>
+inline void Serializer::serialize<ISerializable>(std::ostream& out,
+                                                 ISerializable const& value) {
+	value.serialize(out);
+}
+
+template <>
+inline void Serializer::deserialize<ISerializable>(std::istream& in,
+                                                   ISerializable& value) {
+	value.deserialize(in);
+}
