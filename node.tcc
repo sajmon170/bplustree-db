@@ -16,7 +16,7 @@ Node<K, V>::Node(NodeAllocator<K, V>& allocator, std::size_t level,
 template <typename K, typename V>
 Node<K, V>::Node(Node<K, V> const& other)
 	: allocator(other.allocator), level(other.level), degree(other.degree),
-	  self(other.self), allocator(allocator), level(level), degree(degree) {
+	  self(other.self) {
 	basic_init();
 }
 
