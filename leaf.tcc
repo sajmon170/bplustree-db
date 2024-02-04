@@ -67,6 +67,71 @@ auto Leaf<K, V>::search(K const& key) -> std::optional<V> {
 }
 
 template <typename K, typename V>
+auto Leaf<K, V>::try_redistribute(std::optional<Index> left_idx,
+                                  std::optional<Index> right_idx,
+                                  K const& key, V const& value)
+	-> std::optional<K> {
+
+	if (left_idx) {
+		auto left = get_allocator().get_leaf(*left_idx, get_level());
+		if (!left.is_full()) {
+			insert(key, value);
+			
+			std::size_t med_idx = (left.get_count() + get_count()) / 2;
+			K med = med_idx < left.get_count()
+			      ? left.get_key(med_idx - 1)
+			      : get_key(med_idx - left.get_count());
+
+			while (left.get_count() < med_idx) {
+				left.data.push_back(data.front());
+				left.increase_count();
+
+				// TODO: replace std::vector with std::deque
+				for (std::size_t i = 0; i + 1 < data.size(); ++i)
+					std::swap(data[i], data[i + 1]);
+
+				data.pop_back();
+				decrease_count();
+			}
+			
+			overwrite();
+			left.overwrite();
+			return med;
+		}
+	}
+
+	if (right_idx) {
+		auto right = get_allocator().get_leaf(*right_idx, get_level());
+		if (!right.is_full()) {
+			insert(key, value);
+
+			std::size_t med_idx = (right.get_count() + get_count()) / 2;
+			K med = med_idx < get_count()
+			      ? get_key(med_idx - 1)
+			      : right.get_key(med_idx - get_count());
+
+			while (right.get_count() < med_idx) {
+				right.data.push_back(data.back());
+				right.increase_count();
+
+				data.pop_back();
+				decrease_count();
+
+				// TODO: replace std::vector with std::deque
+				for (std::size_t i = right.data.size() - 1; i > 0; --i)
+					std::swap(right.data[i], right.data[i - 1]);
+			}
+			
+			overwrite();
+			right.overwrite();
+			return med;
+		}
+	}
+
+	return { };
+}
+
+template <typename K, typename V>
 auto Leaf<K, V>::split_right()
 	-> std::tuple<std::unique_ptr<Node<K, V>>, K> {
 
@@ -94,9 +159,6 @@ template <typename K, typename V>
 
 template <typename K, typename V>
 void Leaf<K, V>::print(std::ostream& out) const {
-	//for (auto& [key, value]: data)
-	//	out << "[" << key << ", " << value << "] ";
-
 	out << "[ ";
 	for (auto& [key, _]: data)
 		out << key << " ";

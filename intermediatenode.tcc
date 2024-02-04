@@ -99,20 +99,41 @@ void IntermediateNode<K, V>::insert(K const& key, V const& value) {
 	auto [key_no, _] = Utility::binary_search(keys, key, [](K const& k) {
 		return k;
 	});
-	
-	if (key > get_key(key_no))
-		++key_no;
 
-	Index child_idx = indices[key_no];
+	Index child_no = key > get_key(key_no)? key_no + 1 : key_no;
+	Index child_idx = indices[child_no];
 	auto& child = get_child(child_idx);
-	
+
 	if (child->is_full()) {
-		split_child(child_idx);
-		insert(key, value);
+		std::optional<Index> l_sibling;
+		std::optional<Index> r_sibling;
+		
+		if (child_no > 0)
+			l_sibling = indices[child_no - 1];
+		
+		if (child_no < keys.size() - 1)
+			r_sibling = indices[child_no + 1];
+		
+		if (auto med = child->try_redistribute(l_sibling, r_sibling, key, value)) {
+			keys[key_no] = *med;
+			set_modified();
+		}
+		else {
+			split_child(child_idx);
+			insert(key, value);
+		}
 	}
 	else {
 		child->insert(key, value);
 	}
+}
+
+template <typename K, typename V>
+auto IntermediateNode<K, V>::try_redistribute(std::optional<Index> left_idx,
+                                              std::optional<Index> right_idx,
+                                              K const& key, V const& value)
+	-> std::optional<K> {
+	return { };
 }
 
 template <typename K, typename V>
@@ -121,7 +142,6 @@ void IntermediateNode<K, V>::split_child(std::size_t idx) {
 	
 	auto [right_node, median] = child->split_right();
 	auto right_node_idx = get_allocator().allocate(*right_node);
-	//right_node->overwrite();
 
 	keys.push_back(median);
 	std::int64_t offset = keys.size() - 1;

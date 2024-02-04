@@ -9,7 +9,6 @@
 #include <set>
 #include <utility>
 #include <memory>
-#include <optional>
 
 template <typename K, typename V>
 class IntermediateNode : public Node<K, V> {
@@ -20,6 +19,7 @@ class IntermediateNode : public Node<K, V> {
 	using Node<K, V>::get_count;
 	using Node<K, V>::set_count;
 	using Node<K, V>::increase_count;
+	using Node<K, V>::decrease_count;
 	using Node<K, V>::set_modified;
 	using Node<K, V>::get_block_size;
 	using Node<K, V>::has_leaf_children;
@@ -31,6 +31,7 @@ class IntermediateNode : public Node<K, V> {
 	std::vector<Index> indices;
 	
 public:
+	using Node<K, V>::get_level;
 	IntermediateNode(NodeAllocator<K, V>&, std::size_t, std::size_t);
 	IntermediateNode(NodeAllocator<K, V>&, std::size_t, std::size_t, Index);
 	IntermediateNode(IntermediateNode const&, std::size_t, std::size_t);
@@ -49,6 +50,9 @@ public:
 	}
 	auto search(K const&) -> std::optional<V> override;
 	void insert(K const&, V const&) override;
+
+	auto try_redistribute(std::optional<Index>, std::optional<Index>,
+	                      K const& , V const&) -> std::optional<K> override;
 	auto split_right() -> std::tuple<std::unique_ptr<Node<K, V>>, K> override;
 	void print(std::ostream&) const override;
 	void print_all(std::ostream&) override;

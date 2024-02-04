@@ -45,6 +45,10 @@ protected:
 	inline void increase_count() {
 		++count;
 	}
+
+	inline void decrease_count() {
+		--count;
+	}
 	
 	inline void set_modified() {
 		modified = true;
@@ -91,6 +95,8 @@ public:
 	virtual void print(std::ostream&) const = 0;
 	virtual void print_all(std::ostream&) = 0;
 	virtual auto get_children() -> std::vector<Index> = 0;
+	virtual auto try_redistribute(std::optional<Index>, std::optional<Index>,
+	                              K const&, V const&) -> std::optional<K> = 0;
 
 	// from ISerializable
 	inline auto size_on_disk() const -> std::size_t override {

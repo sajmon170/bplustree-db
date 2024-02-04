@@ -14,7 +14,7 @@ auto main() -> int {
 	std::uniform_int_distribution<int> d(1, 300);
 	std::set<int> generated;
 	
-	int records = 14;
+	int records = 24;
 	int randnum;
 
 	std::cout << "Generated keys: \n";
@@ -22,11 +22,12 @@ auto main() -> int {
 		do randnum = d(e);
 		while (generated.count(randnum) != 0);
 
+		std::cout << "==========================================" << std::endl;
+		std::cout << "Inserting: " << randnum << "\n";
+
 		tree.insert(randnum, {{1, 2}, {3, 4}, {5, 6}, randnum});
 		generated.insert(randnum);
 
-		std::cout << "==========================================" << std::endl;
-		std::cout << "Inserting: " << randnum << "\n";
 		tree.print(std::cout);
 		std::cout << "\n";
 
