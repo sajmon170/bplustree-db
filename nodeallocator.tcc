@@ -170,9 +170,9 @@ auto NodeAllocator<K, V>::cache_intermediate(IntermediateNode<K, V>& parent,
 }
 
 template <typename K, typename V>
-auto NodeAllocator<K, V>::get_leaf(Index child_idx, std::size_t lvl = 0)
+auto NodeAllocator<K, V>::get_leaf(Index child_idx, std::size_t level)
 	-> Leaf<K, V> {
-	auto leaf = Leaf<K, V>(*this, lvl, leaf_degree);
+	auto leaf = Leaf<K, V>(*this, level, leaf_degree);
 	leaf.set_index(child_idx);
 	leaf.read_disk();
 	
@@ -180,9 +180,9 @@ auto NodeAllocator<K, V>::get_leaf(Index child_idx, std::size_t lvl = 0)
 }
 
 template <typename K, typename V>
-auto NodeAllocator<K, V>::get_intermediate(Index child_idx, std::size_t lvl = 0)
+auto NodeAllocator<K, V>::get_intermediate(Index child_idx, std::size_t level)
 	-> IntermediateNode<K, V> {
-	auto node = IntermediateNode<K, V>(*this, lvl, node_degree);
+	auto node = IntermediateNode<K, V>(*this, level, node_degree);
 	node.set_index(child_idx);
 	node.read_disk();
 

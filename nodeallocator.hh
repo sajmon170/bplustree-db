@@ -55,8 +55,11 @@ public:
 	auto cache_intermediate(IntermediateNode<K, V>&, Index)
 		-> std::unique_ptr<Node<K, V>>&;
 
-	auto get_leaf(Index) -> Leaf<K, V>;
-	auto get_intermediate(Index) -> IntermediateNode<K, V>;
+	auto get_leaf(Index, std::size_t level = 0)
+		-> Leaf<K, V>;
+
+	auto get_intermediate(Index, std::size_t level = 0)
+		-> IntermediateNode<K, V>;
 
 	inline auto get_path() const -> std::filesystem::path {
 		return path;

@@ -99,13 +99,13 @@ void IntermediateNode<K, V>::insert(K const& key, V const& value) {
 	auto [key_no, _] = Utility::binary_search(keys, key, [](K const& k) {
 		return k;
 	});
+	
+	if (key > get_key(key_no))
+		++key_no;
 
-	Index left_idx = indices[key_no];
-	Index right_idx = indices[key_no + 1];
-	Index child_idx = (key <= get_key(key_no))? left_idx : right_idx;
-
+	Index child_idx = indices[key_no];
 	auto& child = get_child(child_idx);
-
+	
 	if (child->is_full()) {
 		split_child(child_idx);
 		insert(key, value);

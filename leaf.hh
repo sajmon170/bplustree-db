@@ -53,10 +53,6 @@ public:
 	static constexpr auto get_entry_size() -> std::size_t {
 		return sizeof(std::pair<K, V>);
 	}
-
-	inline void debug() override {
-		print(std::cout);
-	}
 };
 
 #include "leaf.tcc"

@@ -64,10 +64,6 @@ public:
 	static constexpr auto get_entry_size() -> std::size_t {
 		return sizeof(K) + sizeof(Index);
 	}
-
-	inline void debug() override {
-		print(std::cout);
-	}
 };
 
 #include "intermediatenode.tcc"

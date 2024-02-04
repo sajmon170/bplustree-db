@@ -91,7 +91,6 @@ public:
 	virtual void print(std::ostream&) const = 0;
 	virtual void print_all(std::ostream&) = 0;
 	virtual auto get_children() -> std::vector<Index> = 0;
-	virtual void debug() = 0 ;
 
 	// from ISerializable
 	inline auto size_on_disk() const -> std::size_t override {
