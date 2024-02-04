@@ -20,11 +20,18 @@ IntermediateNode<K, V>::IntermediateNode(IntermediateNode<K, V> const& other,
 		keys.push_back(other.keys[it]);
 		indices.push_back(other.indices[it]);
 	}
+
+	indices.push_back(other.indices[end]);
+
+	set_count(keys.size());
 }
 
 template <typename K, typename V>
 void IntermediateNode<K, V>::serialize(std::ostream& out) const {
-	Serializer::serialize(out, keys.size());
+	Serializer::reset_count();
+
+	std::size_t size = keys.size();
+	Serializer::serialize(out, size);
 	
 	for (auto& key: keys)
 		Serializer::serialize(out, key);
@@ -32,10 +39,8 @@ void IntermediateNode<K, V>::serialize(std::ostream& out) const {
 	for (auto& index: indices)
 		Serializer::serialize(out, index);
 
-	Serializer::allocate<K>(out, get_max_keys() - keys.size());
-	Serializer::allocate<Index>(out, get_max_keys() + 1 - indices.size());
-	std::size_t data_size = keys.size()*sizeof(K) + indices.size()*sizeof(Index);
-	Serializer::pad_out(out, get_block_size() - data_size);
+	std::size_t written = Serializer::bytes_written();
+	Serializer::pad_out(out, get_block_size() - written);
 }
 
 template <typename K, typename V>
@@ -46,14 +51,14 @@ void IntermediateNode<K, V>::deserialize(std::istream& in) {
 
 	keys.clear();
 	K key;
-	for (int i = 0; i < size; ++i) {
+	for (std::size_t i = 0; i < size; ++i) {
 		Serializer::deserialize(in, key);
 		keys.push_back(key);
 	}
 
 	indices.clear();
 	Index index;
-	for (int i = 0; i < size + 1; ++i) {
+	for (std::size_t i = 0; i < size + 1; ++i) {
 		Serializer::deserialize(in, index);
 		indices.push_back(index);
 	}
@@ -61,60 +66,83 @@ void IntermediateNode<K, V>::deserialize(std::istream& in) {
 
 template <typename K, typename V>
 auto IntermediateNode<K, V>::search(K const& key) -> std::optional<V> {
-	auto idx = Utility::binary_search(keys, key).first;
-	if (key <= get_key(idx))
-		return get_child(idx).search(key);
-	else
-		return get_child(idx + 1).search(key);
+	auto key_no = Utility::binary_search(keys, key, [](K const& k) {
+		return k;
+	}).first;
+
+	Index left_idx = indices[key_no];
+	Index right_idx = indices[key_no + 1];
+	Index child_idx = (key <= get_key(key_no))? left_idx : right_idx;
+
+	return get_child(child_idx)->search(key);
 }
 
 template <typename K, typename V>
-auto IntermediateNode<K, V>::split_right() -> std::tuple<Node<K, V>, K> {
+auto IntermediateNode<K, V>::split_right()
+	-> std::tuple<std::unique_ptr<Node<K, V>>, K> {
+
 	std::size_t mid = get_count() / 2;
 	K median = keys[mid];
-	auto right = IntermediateNode(*this, mid, get_count());
-	keys.resize(mid - 1);
-	indices.resize(mid - 1);
+	auto right = std::make_unique<IntermediateNode>(*this, mid + 1, get_count());
 	
-	// WARNING! aren't there more indices than keys?
-	// shouldn't this be indices.resize(mid) or indices.resize(mid+1)?
+	keys.resize(mid + 1);
+	indices.resize(mid + 2);
 
-	return {right, median};
+	set_count(keys.size());
+	set_modified();
+
+	return { std::move(right), median };
 }
 
 template <typename K, typename V>
 void IntermediateNode<K, V>::insert(K const& key, V const& value) {
-	int i = keys.size();
-	while (keys[i] > key)
-		--i;
+	auto [key_no, _] = Utility::binary_search(keys, key, [](K const& k) {
+		return k;
+	});
 
-	auto child = get_child(i);
-	if (child.is_full())
-		split_child(i);
+	Index left_idx = indices[key_no];
+	Index right_idx = indices[key_no + 1];
+	Index child_idx = (key <= get_key(key_no))? left_idx : right_idx;
 
-	child.insert(key, value);
+	auto& child = get_child(child_idx);
+
+	if (child->is_full()) {
+		split_child(child_idx);
+		insert(key, value);
+	}
+	else {
+		child->insert(key, value);
+	}
 }
 
 template <typename K, typename V>
 void IntermediateNode<K, V>::split_child(std::size_t idx) {
-	auto child = get_child(idx);
-	auto [right_node, median] = child.split_right();
-	auto right_node_idx = get_allocator().allocate(right_node);
+	auto& child = get_child(idx);
 	
-	keys.push_back(median);
-	for (std::size_t i = keys.size() - 1; i > right_node_idx; --i)
-		std::swap(keys[i], keys[i - 1]);
+	auto [right_node, median] = child->split_right();
+	auto right_node_idx = get_allocator().allocate(*right_node);
+	//right_node->overwrite();
 
-	indices.push_back(child.get_index());
-	for (std::size_t i = indices.size() - 1; i > right_node_idx + 1; --i)
+	keys.push_back(median);
+	std::int64_t offset = keys.size() - 1;
+	while (offset - 1 >= 0 && keys[offset] < keys[offset - 1]) {
+		std::swap(keys[offset], keys[offset - 1]);
+		--offset;
+	}
+
+	indices.push_back(right_node_idx);
+	for (std::int64_t i = indices.size() - 1; i - 1 > offset; --i)
 		std::swap(indices[i], indices[i - 1]);
 
 	set_modified();
+	increase_count();
 }
 
 template <typename K, typename V>
-auto IntermediateNode<K, V>::get_child(std::size_t idx) -> Node<K, V>& {
-	if (has_leaf_children)
+auto IntermediateNode<K, V>::get_child(std::size_t idx)
+	-> std::unique_ptr<Node<K, V>>& {
+
+	if (has_leaf_children())
 		return get_allocator().cache_leaf(*this, idx);
 	else
 		return get_allocator().cache_intermediate(*this, idx);
@@ -125,4 +153,86 @@ void IntermediateNode<K, V>::make_root(Index first) {
 	keys.clear();
 	indices.clear();
 	indices.push_back(first);
+}
+
+template <typename K, typename V>
+void IntermediateNode<K, V>::print(std::ostream& out) const {
+	out << "{ ";
+	out << indices.front() << " ";
+	for (std::size_t i = 0; i < keys.size(); ++i) {
+		out << "[" << keys[i] << "] " << indices[i + 1] << " ";
+	}
+	out << "} ";
+}
+
+template <typename K, typename V>
+void IntermediateNode<K, V>::print_all(std::ostream& out) {
+	std::size_t level = 1;
+	out << "Level: " << level << "\n";
+	print(out);
+	out << "\n";
+	std::queue<std::vector<Index>> intermediate;
+	std::queue<std::vector<Index>> leaves;
+	std::set<Index> visited;
+
+	if (level == get_allocator().get_height() - 1)
+		leaves.push(get_children());
+	else
+		intermediate.push(get_children());
+
+	++level;
+	std::size_t level_sz = 1;
+	std::size_t next_sz;
+	
+	while (!intermediate.empty()) {
+		next_sz = 0;
+
+		out << "\nLevel: " << level << "\n";
+		for (std::size_t i = 0; i < level_sz; ++i ) {
+			auto& children = intermediate.front();
+
+			for (auto& idx: children) {
+				if (visited.count(idx))
+					continue;
+
+				visited.insert(idx);
+				
+				auto child = get_allocator().get_intermediate(idx);
+				child.print(out);
+
+				if (level == get_allocator().get_height() - 1)
+					leaves.push(child.get_children());
+				else {
+					++next_sz;
+					intermediate.push(child.get_children());
+				}
+			}
+
+			intermediate.pop();
+		}
+
+		level_sz = next_sz;
+		++level;
+		out << std::endl;
+	}
+
+	out << std::endl;
+	out << "Level: " << level << "\n";
+	while (!leaves.empty()) {
+		auto& children = leaves.front();
+
+		for (auto& idx: children) {
+			if (visited.count(idx))
+				continue;
+
+			visited.insert(idx);
+
+			auto child = get_allocator().get_leaf(idx);
+			child.print(out);
+		}
+		
+		leaves.pop();
+	}
+
+	out << std::endl;
 }

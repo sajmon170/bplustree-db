@@ -18,13 +18,14 @@ Node<K, V>::Node(Node<K, V> const& other)
 	: allocator(other.allocator), level(other.level), degree(other.degree),
 	  self(other.self) {
 	basic_init();
+	leaf_children = other.leaf_children;
 }
 
 template <typename K, typename V>
 void Node<K, V>::overwrite() {
-	auto pos = file.tellg(); 
+	seek_index(self);
 	serialize(file);
-	seek(pos);
+	seek_index(self);
 	reset_modified();
 }
 

@@ -1,6 +1,7 @@
 template <typename K, typename V>
 Tree<K, V>::Tree(std::filesystem::path const& path, std::size_t block_size)
-	: allocator(path, block_size) {}
+	: allocator(path, block_size) {
+}
 
 template <typename K, typename V>
 Tree<K, V>::Tree(std::filesystem::path const& path)
@@ -17,4 +18,10 @@ void Tree<K, V>::insert(K const& key, V const& value) {
 		allocator.replace_root();
 
 	get_root().insert(key, value);
+}
+
+template <typename K, typename V>
+void Tree<K, V>::print(std::ostream& out) {
+	allocator.save_changes();
+	allocator.get_root().print_all(out);
 }

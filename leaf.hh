@@ -12,8 +12,11 @@ class Leaf : public Node<K, V> {
 	using Node<K, V>::get_max_keys;
 	using Node<K, V>::get_count;
 	using Node<K, V>::set_count;
+	using Node<K, V>::increase_count;
 	using Node<K, V>::set_modified;
 	using Node<K, V>::get_block_size;
+	using Node<K, V>::was_modified;
+	using Node<K, V>::overwrite;
 
 	Index left;
 	std::vector<std::pair<K, V>> data;
@@ -24,6 +27,11 @@ public:
 	Leaf(NodeAllocator<K, V>&, std::size_t, std::size_t, Index);
 	Leaf(Leaf const&, std::size_t, std::size_t);
 
+	~Leaf() {
+		if (was_modified())
+			overwrite();
+	}
+
 	// from ISerializable
 	void serialize(std::ostream&) const override;
 	void deserialize(std::istream&) override;
@@ -32,13 +40,22 @@ public:
 	inline auto get_key(Index idx) const -> K override {
 		return data[idx].first;
 	}
+	void print(std::ostream&) const override;
+	void print_all(std::ostream&) override;
+	inline auto get_children() -> std::vector<Index> override {
+		return {};
+	}
 
-	auto split_right() -> std::tuple<Node<K, V>, K> override;
+	auto split_right() -> std::tuple<std::unique_ptr<Node<K, V>>, K> override;
 	auto search(K const&) -> std::optional<V> override;
 	void insert(K const&, V const&) override;
 
 	static constexpr auto get_entry_size() -> std::size_t {
 		return sizeof(std::pair<K, V>);
+	}
+
+	inline void debug() override {
+		print(std::cout);
 	}
 };
 

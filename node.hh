@@ -6,6 +6,9 @@
 #include <fstream>
 #include <optional>
 #include <tuple>
+#include <memory>
+#include <ostream>
+#include <vector>
 
 template <typename K, typename V>
 class NodeAllocator;
@@ -26,6 +29,8 @@ private:
 	std::size_t count = 0;
 	bool modified = false;
 
+	bool leaf_children = false;
+
 protected:
 	inline void basic_init() {
 		file = std::fstream(allocator.get_path(), std::ios::in
@@ -37,8 +42,10 @@ protected:
 		count = cnt;
 	}
 
-	virtual auto split_right() -> std::tuple<Node, K> = 0;
-
+	inline void increase_count() {
+		++count;
+	}
+	
 	inline void set_modified() {
 		modified = true;
 	}
@@ -75,9 +82,16 @@ public:
 	Node(NodeAllocator<K, V>&, std::size_t, std::size_t, Index);
 	Node(Node const&);
 
+	virtual ~Node() = default;
+
 	virtual auto get_key(Index) const -> K = 0;
 	virtual auto search(K const&) -> std::optional<V> = 0;
 	virtual void insert(K const&, V const&) = 0;
+	virtual auto split_right() -> std::tuple<std::unique_ptr<Node>, K> = 0;
+	virtual void print(std::ostream&) const = 0;
+	virtual void print_all(std::ostream&) = 0;
+	virtual auto get_children() -> std::vector<Index> = 0;
+	virtual void debug() = 0 ;
 
 	// from ISerializable
 	inline auto size_on_disk() const -> std::size_t override {
@@ -109,7 +123,7 @@ public:
 	}
 
 	inline auto is_full() const -> bool {
-		return count == 2*degree - 1;
+		return count == get_max_keys();
 	}
 
 	inline auto was_modified() const -> bool {
@@ -127,6 +141,14 @@ public:
 
 	inline auto get_level() -> std::size_t {
 		return level;
+	}
+
+	inline void set_leaf_children() {
+		leaf_children = true;
+	}
+
+	inline bool has_leaf_children() const {
+		return leaf_children;
 	}
 
 	void read_disk();

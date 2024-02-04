@@ -5,8 +5,11 @@
 #include "utils.hh"
 
 #include <vector>
+#include <queue>
+#include <set>
 #include <utility>
 #include <memory>
+#include <optional>
 
 template <typename K, typename V>
 class IntermediateNode : public Node<K, V> {
@@ -16,21 +19,25 @@ class IntermediateNode : public Node<K, V> {
 	using Node<K, V>::get_max_keys;
 	using Node<K, V>::get_count;
 	using Node<K, V>::set_count;
+	using Node<K, V>::increase_count;
 	using Node<K, V>::set_modified;
 	using Node<K, V>::get_block_size;
+	using Node<K, V>::has_leaf_children;
+	using Node<K, V>::was_modified;
+	using Node<K, V>::overwrite;
+	using Node<K, V>::get_index;
 
 	std::vector<K> keys;
 	std::vector<Index> indices;
-	bool has_leaf_children;
-
-protected:
-	// from Node
-	auto split_right() -> std::tuple<Node<K, V>, K> override;
 	
 public:
 	IntermediateNode(NodeAllocator<K, V>&, std::size_t, std::size_t);
 	IntermediateNode(NodeAllocator<K, V>&, std::size_t, std::size_t, Index);
 	IntermediateNode(IntermediateNode const&, std::size_t, std::size_t);
+	~IntermediateNode() {
+		if (was_modified())
+			overwrite();
+	}
 
 	// from ISerializable
 	void serialize(std::ostream&) const override;
@@ -42,18 +49,24 @@ public:
 	}
 	auto search(K const&) -> std::optional<V> override;
 	void insert(K const&, V const&) override;
-
-	void split_child(std::size_t);
-	auto get_child(std::size_t) -> Node<K, V>&;
-	
-	inline void set_leaf_children() {
-		has_leaf_children = true;
+	auto split_right() -> std::tuple<std::unique_ptr<Node<K, V>>, K> override;
+	void print(std::ostream&) const override;
+	void print_all(std::ostream&) override;
+	inline auto get_children() -> std::vector<Index> override {
+		return indices;
 	}
+	
+	void split_child(std::size_t);
+	auto get_child(std::size_t) -> std::unique_ptr<Node<K, V>>&;
 	
 	void make_root(Index);
 
 	static constexpr auto get_entry_size() -> std::size_t {
 		return sizeof(K) + sizeof(Index);
+	}
+
+	inline void debug() override {
+		print(std::cout);
 	}
 };
 

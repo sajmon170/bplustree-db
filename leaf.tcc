@@ -15,22 +15,25 @@ Leaf<K, V>::Leaf(Leaf<K, V> const& other, std::size_t beg, std::size_t end)
 	right = other.right;
 	for (auto it = beg; it < end; ++it)
 		data.push_back(other.data[it]);
+
+	set_count(data.size());
 }
 
 template <typename K, typename V>
 void Leaf<K, V>::serialize(std::ostream& out) const {
+	Serializer::reset_count();
 	Serializer::serialize(out, left);
+	std::size_t size = data.size();
+	Serializer::serialize(out, size);
 
-	Serializer::serialize(out, data.size());
 	for (auto& [key, value]: data) {
 		Serializer::serialize(out, key);
 		Serializer::serialize(out, value);
 	}
 	
 	Serializer::serialize(out, right);
-	Serializer::allocate<std::pair<K, V>>(out, get_max_keys() - data.size());
-	std::size_t data_size = 2*sizeof(Index) + data.size() * sizeof(data[0]);
-	Serializer::pad_out(out, get_block_size() - data_size);
+	std::size_t written = Serializer::bytes_written();
+	Serializer::pad_out(out, get_block_size() - written);
 }
 
 template <typename K, typename V>
@@ -42,7 +45,7 @@ void Leaf<K, V>::deserialize(std::istream& in) {
 
 	std::pair<K, V> pair;
 	data.clear();
-	for (int i = 0; i < size; i++) {
+	for (std::size_t i = 0; i < size; i++) {
 		Serializer::deserialize(in, pair.first);
 		Serializer::deserialize(in, pair.second);
 		data.push_back(pair);
@@ -52,35 +55,55 @@ void Leaf<K, V>::deserialize(std::istream& in) {
 }
 
 template <typename K, typename V>
-	auto Leaf<K, V>::search(K const& key) -> std::optional<V> {
+auto Leaf<K, V>::search(K const& key) -> std::optional<V> {
 	auto [_, data_pair] = Utility::binary_search(data, key, [](auto const& pair) {
 		return pair.first;
 	});
 
 	if (data_pair)
-		return std::get<V>(data_pair);
+		return (*data_pair).second;
 	else
 		return {};
 }
 
-
 template <typename K, typename V>
-	auto Leaf<K, V>::split_right() -> std::tuple<Node<K, V>, K> {
+auto Leaf<K, V>::split_right()
+	-> std::tuple<std::unique_ptr<Node<K, V>>, K> {
+
 	std::size_t mid = get_count() / 2;
 	K median = data[mid].first;
-	auto right = Leaf(*this, mid, get_count());
-	data.resize(mid - 1);
+	auto right = std::make_unique<Leaf>(*this, mid + 1, get_count());
+	data.resize(mid + 1);
 
-	return {right, median};
+	set_count(data.size());
+	set_modified();
+
+	return { std::move(right), median };
 }
 
 template <typename K, typename V>
 	void Leaf<K, V>::insert(K const& key, V const& value) {
 	data.push_back({key, value});
 
-	for (std::size_t i = data.size() - 1; get_key(i) > key; --i)
+	for (std::size_t i = data.size() - 1; i > 0 && get_key(i) < get_key(i-1); --i)
 		std::swap(data[i], data[i - 1]);
 
 	set_modified();
+	increase_count();
 }
 
+template <typename K, typename V>
+void Leaf<K, V>::print(std::ostream& out) const {
+	//for (auto& [key, value]: data)
+	//	out << "[" << key << ", " << value << "] ";
+
+	out << "[ ";
+	for (auto& [key, _]: data)
+		out << key << " ";
+	out << "] ";
+}
+
+template <typename K, typename V>
+void Leaf<K, V>::print_all(std::ostream& out) {
+	print(out);
+}

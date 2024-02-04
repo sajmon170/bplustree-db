@@ -10,19 +10,20 @@
 #include <memory>
 #include <filesystem>
 #include <fstream>
+#include <ostream>
 
 using Index = std::size_t;
 
 template <typename K, typename V>
-class NodeAllocator : ISerializable {
+class NodeAllocator : public ISerializable {
 	std::filesystem::path path;
 	std::fstream file;
 
 	std::deque<std::unique_ptr<Node<K, V>>> nodes;
 	std::vector<Index> empty_blocks;
 	std::size_t node_count = 0;
-	std::size_t tree_height = 0;
-	Index root_idx;
+	std::size_t tree_height = 1;
+	Index root_idx = 0;
 
 	std::size_t node_degree;
 	std::size_t leaf_degree;
@@ -46,14 +47,16 @@ public:
 	}
 
 	void replace_root();
-	auto allocate(Node<K, V> const&) -> Index;
-	void defragment();
+	auto allocate(Node<K, V>&) -> Index;
 
 	auto cache_leaf(IntermediateNode<K, V>&, Index)
-		-> Leaf<K, V>&;
+		-> std::unique_ptr<Node<K, V>>&;
 
 	auto cache_intermediate(IntermediateNode<K, V>&, Index)
-		-> IntermediateNode<K, V>&;
+		-> std::unique_ptr<Node<K, V>>&;
+
+	auto get_leaf(Index) -> Leaf<K, V>;
+	auto get_intermediate(Index) -> IntermediateNode<K, V>;
 
 	inline auto get_path() const -> std::filesystem::path {
 		return path;
@@ -66,6 +69,10 @@ public:
 	inline auto get_height() const -> std::size_t {
 		return tree_height;
 	}
+
+	void save_changes();
+
+	void debug(std::ostream& out);
 };
 
 #include "nodeallocator.tcc"

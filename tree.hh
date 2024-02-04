@@ -35,6 +35,16 @@ public:
 	inline auto get_height() -> std::size_t {
 		return allocator.get_height();
 	}
+
+	inline void debug(std::ostream& out) {
+		allocator.debug(out);
+	}
+	
+	inline void debug_children(std::ostream& out) {
+		allocator.get_root().print_all(out);
+	}
+
+	void print(std::ostream&);
 };
 
 #include "tree.tcc"
