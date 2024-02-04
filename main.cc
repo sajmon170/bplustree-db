@@ -14,25 +14,26 @@ auto main() -> int {
 	std::uniform_int_distribution<int> d(1, 300);
 	std::set<int> generated;
 	
-	int records = 24;
+	int records = 108;
 	int randnum;
 
-	std::cout << "Generated keys: \n";
 	for (int i = 0; i < records; ++i) {
 		do randnum = d(e);
 		while (generated.count(randnum) != 0);
 
-		std::cout << "==========================================" << std::endl;
-		std::cout << "Inserting: " << randnum << "\n";
+		if (i == 108 - 1) {
+			std::cout << "Inserting: " << randnum << std::endl;
+			nbr();
+		}
 
 		tree.insert(randnum, {{1, 2}, {3, 4}, {5, 6}, randnum});
 		generated.insert(randnum);
 
-		tree.print(std::cout);
-		std::cout << "\n";
-
+		if (i == 107 - 1) {
+			tree.print(std::cout);
+			std::cout << "===========================" << std::endl;
+		}
 	}
 
-	std::cout << "\n\n";
 	tree.print(std::cout);
 }
