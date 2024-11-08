@@ -66,6 +66,8 @@ auto Leaf<K, V>::search(K const& key) -> std::optional<V> {
 		return {};
 }
 
+#include <iostream>
+
 template <typename K, typename V>
 auto Leaf<K, V>::try_redistribute(std::optional<Index> left_idx,
                                   std::optional<Index> right_idx,
@@ -132,7 +134,7 @@ auto Leaf<K, V>::try_redistribute(std::optional<Index> left_idx,
 }
 
 template <typename K, typename V>
-auto Leaf<K, V>::split_right()
+auto Leaf<K, V>::split_right(std::optional<Index> right_sibling)
 	-> std::tuple<std::unique_ptr<Node<K, V>>, K> {
 
 	std::size_t mid = get_count() / 2;

@@ -16,6 +16,7 @@ IntermediateNode<K, V>::IntermediateNode(IntermediateNode<K, V> const& other,
                                          std::size_t beg,
                                          std::size_t end)
 	: Node<K, V>::Node(other) {
+
 	for (auto it = beg; it < end; ++it) {
 		keys.push_back(other.keys[it]);
 		indices.push_back(other.indices[it]);
@@ -78,7 +79,7 @@ auto IntermediateNode<K, V>::search(K const& key) -> std::optional<V> {
 }
 
 template <typename K, typename V>
-auto IntermediateNode<K, V>::split_right()
+auto IntermediateNode<K, V>::split_right(std::optional<Index> right_sibling)
 	-> std::tuple<std::unique_ptr<Node<K, V>>, K> {
 
 	std::size_t mid = get_count() / 2;
@@ -119,7 +120,7 @@ void IntermediateNode<K, V>::insert(K const& key, V const& value) {
 			set_modified();
 		}
 		else {
-			split_child(child_idx);
+			split_child(child_idx, r_sibling);
 			insert(key, value);
 		}
 	}
@@ -137,10 +138,11 @@ auto IntermediateNode<K, V>::try_redistribute(std::optional<Index> left_idx,
 }
 
 template <typename K, typename V>
-void IntermediateNode<K, V>::split_child(std::size_t idx) {
+void IntermediateNode<K, V>::split_child(std::size_t idx,
+                                         std::optional<Index> right_sibling) {
 	auto& child = get_child(idx);
 	
-	auto [right_node, median] = child->split_right();
+	auto [right_node, median] = child->split_right(right_sibling);
 	auto right_node_idx = get_allocator().allocate(*right_node);
 
 	keys.push_back(median);

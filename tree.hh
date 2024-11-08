@@ -44,6 +44,19 @@ public:
 		allocator.get_root().print_all(out);
 	}
 
+	inline auto get_reads() const -> std::size_t {
+		return Node<K, V>::get_reads();
+	}
+	
+	inline auto get_writes() const -> std::size_t {
+		return Node<K, V>::get_writes();
+	}
+	
+	inline void reset_stats() const {
+		Node<K, V>::reset_reads();
+		Node<K, V>::reset_writes();
+	}
+
 	void print(std::ostream&);
 };
 

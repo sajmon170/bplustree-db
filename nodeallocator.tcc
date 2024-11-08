@@ -1,3 +1,5 @@
+#include <iostream>
+
 template <typename K, typename V>
 NodeAllocator<K, V>::NodeAllocator(std::filesystem::path const& path,
                                    std::size_t block_size)
@@ -103,7 +105,7 @@ void NodeAllocator<K, V>::replace_root() {
 	Index old_root = root_idx;
 	new_root.make_root(old_root);
 	root_idx = allocate(new_root);
-	new_root.split_child(old_root);
+	new_root.split_child(old_root, { });
 }
 
 template <typename K, typename V>

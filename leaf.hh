@@ -52,7 +52,8 @@ public:
 
 	auto try_redistribute(std::optional<Index>, std::optional<Index>,
 	                      K const& , V const&) -> std::optional<K> override;
-	auto split_right() -> std::tuple<std::unique_ptr<Node<K, V>>, K> override;
+	auto split_right(std::optional<Index>)
+		-> std::tuple<std::unique_ptr<Node<K, V>>, K> override;
 	auto search(K const&) -> std::optional<V> override;
 	void insert(K const&, V const&) override;
 

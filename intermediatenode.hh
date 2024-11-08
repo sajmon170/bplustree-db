@@ -10,6 +10,8 @@
 #include <utility>
 #include <memory>
 
+#include <iostream>
+
 template <typename K, typename V>
 class IntermediateNode : public Node<K, V> {
 	using Index = typename Node<K, V>::Index;
@@ -53,14 +55,15 @@ public:
 
 	auto try_redistribute(std::optional<Index>, std::optional<Index>,
 	                      K const& , V const&) -> std::optional<K> override;
-	auto split_right() -> std::tuple<std::unique_ptr<Node<K, V>>, K> override;
+	auto split_right(std::optional<Index>)
+		-> std::tuple<std::unique_ptr<Node<K, V>>, K> override;
 	void print(std::ostream&) const override;
 	void print_all(std::ostream&) override;
 	inline auto get_children() -> std::vector<Index> override {
 		return indices;
 	}
 	
-	void split_child(std::size_t);
+	void split_child(std::size_t, std::optional<Index> sibling);
 	auto get_child(std::size_t) -> std::unique_ptr<Node<K, V>>&;
 	
 	void make_root(Index);

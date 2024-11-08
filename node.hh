@@ -31,6 +31,9 @@ private:
 
 	bool leaf_children = false;
 
+	static std::size_t reads;
+	static std::size_t writes;
+
 protected:
 	inline void basic_init() {
 		file = std::fstream(allocator.get_path(), std::ios::in
@@ -91,7 +94,8 @@ public:
 	virtual auto get_key(Index) const -> K = 0;
 	virtual auto search(K const&) -> std::optional<V> = 0;
 	virtual void insert(K const&, V const&) = 0;
-	virtual auto split_right() -> std::tuple<std::unique_ptr<Node>, K> = 0;
+	virtual auto split_right(std::optional<Index>)
+		-> std::tuple<std::unique_ptr<Node<K, V>>, K> = 0;
 	virtual void print(std::ostream&) const = 0;
 	virtual void print_all(std::ostream&) = 0;
 	virtual auto get_children() -> std::vector<Index> = 0;
@@ -152,12 +156,34 @@ public:
 		leaf_children = true;
 	}
 
-	inline bool has_leaf_children() const {
+	inline auto has_leaf_children() const -> bool {
 		return leaf_children;
+	}
+
+	inline static auto get_reads() -> std::size_t {
+		return reads;
+	}
+
+	inline static auto get_writes() -> std::size_t {
+		return writes;
+	}
+
+	inline static void reset_reads() {
+		reads = 0;
+	}
+
+	inline static void reset_writes() {
+		writes = 0;
 	}
 
 	void read_disk();
 	void overwrite();
 };
+
+template <typename K, typename V>
+std::size_t Node<K, V>::reads = 0;
+
+template <typename K, typename V>
+std::size_t Node<K, V>::writes = 0;
 
 #include "node.tcc"

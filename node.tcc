@@ -27,6 +27,7 @@ void Node<K, V>::overwrite() {
 	serialize(file);
 	seek_index(self);
 	reset_modified();
+	++writes;
 }
 
 template <typename K, typename V>
@@ -35,4 +36,5 @@ void Node<K, V>::read_disk() {
 	deserialize(file);
 	seek_index(self);
 	reset_modified();
+	++reads;
 }
